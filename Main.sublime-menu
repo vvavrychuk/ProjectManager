@@ -34,6 +34,10 @@
                         "command": "project_manager", "args": {"action": "new"}
                     },
                     {
+                        "caption": "Open Project Enhanced",
+                        "command": "project_manager", "args": {"action": "open_enhanced"}
+                    },
+                    {
                         "caption": "Append Project",
                         "command": "project_manager", "args": {"action": "append"}
                     },

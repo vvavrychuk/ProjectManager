@@ -342,6 +342,27 @@ class Manager:
         self.close_project_by_name(project)
         subl(["-n", self.project_file_name(project)])
 
+    def open_enhanced(self, project):
+        # Make this cross-platform based on
+        # https://github.com/ccampbell/sublime-goto-window/blob/master/GotoWindow.py
+        for w in sublime.windows():
+            if w.project_file_name() == self.project_file_name(project):
+                window_title = "(" + project + ") - Sublime Text"
+                subprocess.call(["wmctrl", "-a", window_title])
+                return
+
+        new_window = sublime.yes_no_cancel_dialog("Open '" + project + "' in a new window?")
+        if new_window == sublime.DIALOG_CANCEL:
+            return
+
+        self.update_recent(project)
+        self.check_project(project)
+        if new_window == sublime.DIALOG_YES:
+            subl(["-n", self.project_file_name(project)])
+        else:
+            self.close_project_by_window(self.window)
+            subl([self.project_file_name(project)])
+
     def _remove_project(self, project):
         ok = sublime.ok_cancel_dialog("Remove \"%s\" from Project Manager?" % project)
         if ok:
@@ -440,7 +461,7 @@ def cancellable(func):
             sublime.set_timeout(self.run, 10)
     return _ret
 
-
+#TODO: consolidate different ways of working with commands
 class ProjectManager(sublime_plugin.WindowCommand):
 
     def show_quick_panel(self, items, on_done):
@@ -474,6 +495,10 @@ class ProjectManager(sublime_plugin.WindowCommand):
         items = [
             ["Open Project", "Open project in the current window"],
             ["Open Project in New Window", "Open project in a new window"],
+            ["Open Project Enhanced", "Switch to project window if opened or open project and ask " +
+                                      "if open in a new window."],
+            #TODO: instead of above three ways, keep only the last one
+
             ["Append Project", "Append project to current window"],
             ["Edit Project", "Edit project settings"],
             ['Rename Project', "Rename project"],
@@ -485,18 +510,19 @@ class ProjectManager(sublime_plugin.WindowCommand):
         ]
 
         def callback(a):
+            #TODO: why numbers?
             if a < 0:
                 return
-            elif a <= 5:
-                actions = ["switch", "new", "append", "edit", "rename", "remove"]
+            elif a <= 6:
+                actions = ["switch", "new", "open_enhanced", "append", "edit", "rename", "remove"]
                 self.run(action=actions[a], caller="manager")
-            elif a == 6:
-                self.run(action="add_project")
             elif a == 7:
-                self.run(action="import_sublime_project")
+                self.run(action="add_project")
             elif a == 8:
-                self.run(action="clear_recent_projects")
+                self.run(action="import_sublime_project")
             elif a == 9:
+                self.run(action="clear_recent_projects")
+            elif a == 10:
                 self.run(action="remove_dead_projects")
 
         self.show_quick_panel(items, callback)
@@ -508,6 +534,11 @@ class ProjectManager(sublime_plugin.WindowCommand):
     @cancellable
     def on_switch(self, action):
         self.manager.switch_project(self.projects[action])
+
+    @cancellable
+    def on_open_enhanced(self, action):
+        #TODO: why project argument is taken from map using key action?
+        self.manager.open_enhanced(self.projects[action])
 
     @cancellable
     def on_append(self, action):
