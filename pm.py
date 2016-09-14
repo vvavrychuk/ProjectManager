@@ -464,9 +464,11 @@ def cancellable(func):
 #TODO: consolidate different ways of working with commands
 class ProjectManager(sublime_plugin.WindowCommand):
 
-    def show_quick_panel(self, items, on_done):
+    def show_quick_panel(self, items):
+        display = list(map(lambda item: item[:2], items))
+        on_done = lambda index: items[index][2](index)
         sublime.set_timeout(
-            lambda: self.window.show_quick_panel(items, on_done),
+            lambda: self.window.show_quick_panel(display, on_done),
             10)
 
     def run(self, action=None, caller=None):
@@ -485,11 +487,13 @@ class ProjectManager(sublime_plugin.WindowCommand):
         else:
             self.caller = caller
             callback = eval("self.on_" + action)
+
             self.projects, display = self.manager.display_projects()
-            if not self.projects:
-                sublime.message_dialog("Project list is empty.")
-                return
-            self.show_quick_panel(display, callback)
+            for item in display:
+                item.append(callback)
+
+            #TODO: to display add "Add project..."
+            self.show_quick_panel(display)
 
     def show_options(self):
         items = [
